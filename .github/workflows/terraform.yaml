@@ -373,7 +373,7 @@ jobs:
           script: |
             core.setFailed('Terraform plan failed.')
 
-      - name: terraform apply
+      - name: terraform state liste
         working-directory: ${{ inputs.directory }}/
         id: tfapply
         if: ${{ contains(needs.get-env.outputs.action, 'apply')}}
@@ -383,40 +383,6 @@ jobs:
           TF_VAR_sdv_gh_env_name: ${{ needs.get-env.outputs.environment }}
         run: |
           git config --global url."https://x-access-token:${{steps.get_github_app_token.outputs.token}}@github.com".insteadOf https://github.com
-          terraform apply -parallelism=${{ inputs.parallelism }} -input=false -no-color tfplan
+          terraform state list
         continue-on-error: true
 
-      - name: Post Apply Success
-        if: steps.tfapply.outcome == 'success'
-        uses: mshick/add-pr-comment@v2
-        with:
-          allow-repeats: false
-          repo-token: ${{steps.get_github_app_token.outputs.token}}
-          message-id: apply-${{ needs.get-env.outputs.environment }}
-          message: |
-            ## Terraform Apply ${{ needs.get-env.outputs.environment }} Succeeded
-            ```
-            ${{ steps.tfapply.outputs.stdout }}
-            ```
-        continue-on-error: true
-
-      - name: Post Apply Failure
-        if: steps.tfapply.outcome == 'failure'
-        uses: mshick/add-pr-comment@v2
-        with:
-          allow-repeats: false
-          repo-token: ${{steps.get_github_app_token.outputs.token}}
-          message-id: apply-${{ needs.get-env.outputs.environment }}
-          message: |
-            ## Terraform Apply ${{ needs.get-env.outputs.environment }} Failed
-            ```
-            ${{ steps.tfapply.outputs.stderr }}
-            ```
-        continue-on-error: true
-
-      - name: Fail if apply failed
-        if: steps.tfapply.outcome == 'failure'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            core.setFailed('Terraform apply failed.')
